@@ -58,3 +58,20 @@ u_true = np.sin(np.pi * x) / (np.pi ** 2)
 rel_error_spec = np.linalg.norm(u_spec - u_true) / np.linalg.norm(u_true)
 
 print("Relative L2 error (spectral):", rel_error_spec)
+
+
+## ----- Phase 2.1: Forcing function generator -----
+
+from data.generate_forcing import generate_sine_forcing
+import matplotlib.pyplot as plt
+
+# Generate a few forcing samples
+for seed in [0, 1, 2]:
+    f, coeffs = generate_sine_forcing(x, K=10, p=2.0, seed=seed)
+    plt.plot(x, f, label=f"seed={seed}")
+
+plt.title("Sample forcing functions")
+plt.xlabel("x")
+plt.ylabel("f(x)")
+plt.legend()
+plt.show()
