@@ -75,3 +75,11 @@ plt.xlabel("x")
 plt.ylabel("f(x)")
 plt.legend()
 plt.show()
+
+# ----- Phase 2.2: Dataset generation -----
+
+from data.generate_dataset import generate_dataset
+
+generate_dataset("train", num_samples=1000, seed=0)
+generate_dataset("val",   num_samples=200,  seed=1)
+generate_dataset("test",  num_samples=200,  seed=2)
