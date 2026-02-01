@@ -83,3 +83,20 @@ from data.generate_dataset import generate_dataset
 generate_dataset("train", num_samples=1000, seed=0)
 generate_dataset("val",   num_samples=200,  seed=1)
 generate_dataset("test",  num_samples=200,  seed=2)
+
+
+# ----- Phase 2.3: Data loader sanity checks -----
+
+from data.data_loader import PoissonDataset, DataLoader
+
+train_data = PoissonDataset("data/datasets/train.npz")
+loader = DataLoader(train_data, batch_size=16, shuffle=True, seed=42)
+
+print("Dataset size:", len(train_data))
+print("Grid size N:", train_data.N)
+print("Metadata:", train_data.meta)
+
+batch = next(iter(loader))
+print("Batch f shape:", batch["f"].shape)
+print("Batch u shape:", batch["u"].shape)
+print("Boundary max (batch u):", abs(batch["u"][:, [0, -1]]).max())
