@@ -22,3 +22,21 @@ u_true = np.sin(np.pi * x) / (np.pi ** 2)
 rel_error = np.linalg.norm(u_numeric - u_true) / np.linalg.norm(u_true)
 
 print("Relative L2 error (convolution):", rel_error)
+
+# ----- Phase 1.3: Finite difference solver -----
+
+from solvers.finite_difference import finite_difference_poisson
+
+# Same forcing function
+f = np.sin(np.pi * x)
+
+# Finite difference solution
+u_fd = finite_difference_poisson(f, h)
+
+# Analytic solution
+u_true = np.sin(np.pi * x) / (np.pi ** 2)
+
+# Relative error
+rel_error_fd = np.linalg.norm(u_fd - u_true) / np.linalg.norm(u_true)
+
+print("Relative L2 error (finite difference):", rel_error_fd)
