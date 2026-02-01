@@ -40,3 +40,21 @@ u_true = np.sin(np.pi * x) / (np.pi ** 2)
 rel_error_fd = np.linalg.norm(u_fd - u_true) / np.linalg.norm(u_true)
 
 print("Relative L2 error (finite difference):", rel_error_fd)
+
+# ----- Phase 1.4: Spectral solver -----
+
+from solvers.spectral_solver import spectral_poisson
+
+# Same forcing
+f = np.sin(np.pi * x)
+
+# Spectral solution
+u_spec = spectral_poisson(f, x)
+
+# Analytic solution
+u_true = np.sin(np.pi * x) / (np.pi ** 2)
+
+# Relative error
+rel_error_spec = np.linalg.norm(u_spec - u_true) / np.linalg.norm(u_true)
+
+print("Relative L2 error (spectral):", rel_error_spec)
