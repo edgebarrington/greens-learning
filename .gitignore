@@ -1,9 +1,12 @@
-# Python bytecode
+# Python
 __pycache__/
 *.pyc
 
 # Virtual environment
 venv/
 
-# OS junk
+# VS Code
+.vscode/
+
+# macOS
 .DS_Store
