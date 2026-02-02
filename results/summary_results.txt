@@ -1,0 +1,15 @@
+Constrained kernel (sym + BC):
+  mean   = 0.11
+  median = 0.05
+  90%    = 0.32
+
+No-symmetry kernel:
+  mean   = 0.08
+  median = 0.04
+  90%    = 0.23
+
+No-BC kernel:
+  mean   = 0.13
+  median = 0.06
+  90%    = 0.42
+  boundary violation ≈ 1.8e-2
