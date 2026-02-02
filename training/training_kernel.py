@@ -5,6 +5,8 @@ from models.constrained_kernel import ConstrainedKernel
 from data.data_loader import PoissonDataset, DataLoader
 from training.loss import operator_loss
 
+import os
+os.makedirs("checkpoints", exist_ok=True)
 
 def train_kernel(
     dataset_path,
@@ -53,4 +55,6 @@ def train_kernel(
         avg_loss = epoch_loss / num_batches
         print(f"Epoch {epoch+1:03d} | Loss: {avg_loss:.6e}")
 
+    torch.save(kernel.state_dict(), "checkpoints/kernel_final.pt")
+    print("Saved trained kernel to checkpoints/kernel_final.pt")
     return kernel
