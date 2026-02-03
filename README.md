@@ -16,16 +16,14 @@ The project is intentionally physics-forward, math-heavy, and avoids black-box M
 
 We consider the 1D Poisson problem
 
-\[
-- u''(x) = f(x), \quad x \in (0,1), \quad u(0)=u(1)=0.
-\]
+$[- u''(x) = f(x), \quad x \in (0,1), \quad u(0)=u(1)=0]$
 
 The exact solution can be written using a Green’s function:
-\[
-u(x) = \int_0^1 G(x,x') f(x') \, dx'.
-\]
+$[
+u(x) = \int_0^1 G(x,x') f(x') \, dx'
+]$
 
-Instead of learning \(u\) directly, we aim to **learn the Green’s function \(G\)** as a kernel, so that the solution emerges through operator application.
+Instead of learning $(u)$ directly, we aim to **learn the Green’s function $(G)$** as a kernel, so that the solution emerges through operator application.
 
 ---
 
@@ -48,7 +46,7 @@ We first implement and cross-validate three classical solvers:
 - **Finite difference solver**
 - **Spectral (sine-series) solver**
 
-All three agree to \(O(10^{-4})\)–\(O(10^{-14})\), establishing a trusted numerical foundation.
+All three agree to $O(10^{-4}))–O(10^{-14})$, establishing a trusted numerical foundation.
 
 This phase ensures that any later ML behavior can be diagnosed against known physics.
 
@@ -56,11 +54,9 @@ This phase ensures that any later ML behavior can be diagnosed against known phy
 
 ## Phase 2 — Data Generation
 
-We generate datasets of forcing–solution pairs \((f, u)\), where:
+We generate datasets of forcing–solution pairs $(f, u)$, where:
 - Forcings are sampled as truncated sine series
-  \[
-  f(x) = \sum_{k=1}^K a_k \sin(k\pi x), \quad a_k \sim \mathcal N(0, k^{-p})
-  \]
+  $[f(x) = \sum_{k=1}^K a_k \sin(k\pi x), \quad a_k \sim \mathcal N(0, k^{-p})]$
 - Solutions are computed using the **spectral solver** as ground truth.
 
 This produces smooth, interpretable data with controlled frequency content and fixed train/val/test splits.
@@ -72,9 +68,7 @@ This produces smooth, interpretable data with controlled frequency content and f
 ### Kernel Parameterization
 
 We parameterize a kernel
-\[
-g_\theta(x, x')
-\]
+$[g_\theta(x, x')]$
 using a small MLP. This kernel is never supervised directly.
 
 ### Physics Constraints (Architectural)
@@ -82,19 +76,12 @@ using a small MLP. This kernel is never supervised directly.
 We enforce physical structure **by construction**, not via penalties:
 
 - **Symmetry**
-  \[
-  G(x,x') = G(x',x)
-  \]
+  $[G(x,x') = G(x',x)]$
 - **Dirichlet boundary conditions**
-  \[
-  G(0,x') = G(1,x') = 0
-  \]
+  $[G(0,x') = G(1,x') = 0]$
 
 The learned kernel takes the form
-\[
-\hat G_\theta(x,x') =
-\frac{1}{2}[g_\theta(x,x') + g_\theta(x',x)] \, x(1-x)x'(1-x').
-\]
+$[\hat G_\theta(x,x') = \frac{1}{2}[g_\theta(x,x') + g_\theta(x',x)] \, x(1-x)x'(1-x')]$
 
 ---
 
@@ -102,14 +89,10 @@ The learned kernel takes the form
 
 The model is trained only through operator action:
 
-\[
-\hat u(x_i) = \sum_j \hat G_\theta(x_i,x_j) f(x_j)\, h
-\]
+$[\hat u(x_i) = \sum_j \hat G_\theta(x_i,x_j) f(x_j)\, h]$
 
 and minimizes
-\[
-\mathcal L = \|\hat u - u\|_2^2.
-\]
+$[\mathcal L = \|\hat u - u\|_2^2]$
 
 Notably:
 - The true Green’s function is never shown to the model.
