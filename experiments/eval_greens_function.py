@@ -45,20 +45,33 @@ if __name__ == "__main__":
 # Plotting
 import matplotlib.pyplot as plt
 
-# Plot analytic vs learned Green's function
-fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+fig, axes = plt.subplots(1, 3, figsize=(12, 4))
 
-im0 = axes[0].imshow(G_true, origin="lower", extent=[0,1,0,1])
-axes[0].set_title("Analytic Green's Function")
-plt.colorbar(im0, ax=axes[0])
+vmin = min(G_true.min(), G_learned.min())
+vmax = max(G_true.max(), G_learned.max())
 
-im1 = axes[1].imshow(G_learned, origin="lower", extent=[0,1,0,1])
-axes[1].set_title("Learned Green's Function")
-plt.colorbar(im1, ax=axes[1])
+im0 = axes[0].imshow(
+    G_true, origin="lower", cmap="viridis", vmin=vmin, vmax=vmax
+)
+axes[0].set_title("Analytic Green's function")
 
-im2 = axes[2].imshow(G_learned - G_true, origin="lower", extent=[0,1,0,1])
-axes[2].set_title("Difference (Learned - True)")
-plt.colorbar(im2, ax=axes[2])
+im1 = axes[1].imshow(
+    G_learned, origin="lower", cmap="viridis", vmin=vmin, vmax=vmax
+)
+axes[1].set_title("Learned Green's function")
 
-plt.tight_layout()
-plt.show()
+im2 = axes[2].imshow(
+    G_learned - G_true, origin="lower", cmap="seismic"
+)
+axes[2].set_title("Difference")
+
+for ax in axes:
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+plt.colorbar(im1, ax=axes[:2], shrink=0.8)
+plt.colorbar(im2, ax=axes[2], shrink=0.8)
+
+#plt.tight_layout()
+plt.savefig("results/greens_comparison.png", dpi=200)
+plt.close()
