@@ -1,171 +1,226 @@
 # Learning Green’s Functions as Operators
 
-This project studies **operator learning for elliptic PDEs** through the lens of Green’s functions.  
-Rather than learning solutions pointwise, we learn a **kernel representation of the inverse operator** and train it *only* through its action on forcing functions.
+This project asks a simple question:
 
-The goal is not raw accuracy at all costs, but **modeling clarity**:
-- What does the model learn?
-- What physical structure must be enforced?
-- Where and why does it fail?
+**Can we learn the inverse of a differential operator directly, instead of learning solutions?**
 
-The project is intentionally physics-forward, math-heavy, and avoids black-box ML shortcuts.
+Instead of training a model to predict $u(x)$ point-by-point, we train a model to represent the *operator* that maps an input function $f(x)$ to an output function $u(x)$.  
+Once that operator is learned, solutions emerge automatically by applying it.
 
----
+The goal here is not just accuracy, but understanding:
+- what the model actually learns
+- which physical constraints matter
+- where and why the approach breaks
 
-## Problem Setting
-
-We consider the 1D Poisson problem
-
-$[- u''(x) = f(x), \quad x \in (0,1), \quad u(0)=u(1)=0]$
-
-The exact solution can be written using a Green’s function:
-$[
-u(x) = \int_0^1 G(x,x') f(x') \, dx'
-]$
-
-Instead of learning $(u)$ directly, we aim to **learn the Green’s function $(G)$** as a kernel, so that the solution emerges through operator application.
+This is a physics-flavoured, math-first ML project.
 
 ---
 
-## Project Structure
-- greens-learning/
-├── solvers/ # Analytic, finite-difference, and spectral solvers
-├──data/ # Forcing generation, datasets, loaders
-├── models/ # Kernel parameterizations and constrained variants
-├── training/ # Operator loss and training logic
-├── experiments/ # Training runs, evaluation, ablations
-└── results/ # Recorded metrics (no model checkpoints)
+## The intuition (no physics background needed)
+
+Many physical systems behave like this:
+
+> you give the system an input function → a fixed rule transforms it → you get an output function
+
+For linear systems, that “fixed rule” can be written as an **integral kernel**:
+$[u(x) = \int G(x,x') f(x')dx']$
+
+$G(x,x')$ is called a *Green’s function*. You can think of it as:
+- a lookup table of how inputs at $x'$ influence outputs at $x$
+- the inverse of the differential operator
+
+**This project learns $G(x,x')$ itself**, using a neural network.
+
+The model never sees the true Green’s function.  
+It only sees examples of inputs $f$ and resulting outputs $u$.
 
 ---
 
-## Phase 1 — Physics Baselines
+## The test problem
 
-We first implement and cross-validate three classical solvers:
+We work with a deliberately simple system:
 
-- **Analytic Green’s function**
-- **Finite difference solver**
-- **Spectral (sine-series) solver**
+- a 1D Poisson equation on $[0,1]$
+- fixed zero boundary conditions
+- known analytic solution
 
-All three agree to $O(10^{-4}))–O(10^{-14})$, establishing a trusted numerical foundation.
+Why this choice?
+- the physics is clean
+- classical solvers exist
+- failure modes are easy to interpret
+- lessons generalize to harder PDEs
 
-This phase ensures that any later ML behavior can be diagnosed against known physics.
-
----
-
-## Phase 2 — Data Generation
-
-We generate datasets of forcing–solution pairs $(f, u)$, where:
-- Forcings are sampled as truncated sine series
-  $[f(x) = \sum_{k=1}^K a_k \sin(k\pi x), \quad a_k \sim \mathcal N(0, k^{-p})]$
-- Solutions are computed using the **spectral solver** as ground truth.
-
-This produces smooth, interpretable data with controlled frequency content and fixed train/val/test splits.
+This is a *controlled experiment*, not a benchmark chase.
 
 ---
 
-## Phase 3 — Learning the Operator
+## Phase 1 — Establishing ground truth
 
-### Kernel Parameterization
+Before using ML, we implement three classical solvers:
+- analytic Green’s function
+- finite difference
+- spectral (sine-series) solver
 
-We parameterize a kernel
-$[g_\theta(x, x')]$
-using a small MLP. This kernel is never supervised directly.
-
-### Physics Constraints (Architectural)
-
-We enforce physical structure **by construction**, not via penalties:
-
-- **Symmetry**
-  $[G(x,x') = G(x',x)]$
-- **Dirichlet boundary conditions**
-  $[G(0,x') = G(1,x') = 0]$
-
-The learned kernel takes the form
-$[\hat G_\theta(x,x') = \frac{1}{2}[g_\theta(x,x') + g_\theta(x',x)] \, x(1-x)x'(1-x')]$
+All three agree numerically.  
+This gives us a trusted reference and prevents “ML hallucinations”.
 
 ---
 
-### Operator Loss
+## Phase 2 — Generating meaningful data
 
-The model is trained only through operator action:
+We generate datasets of input–output function pairs $(f,u)$.
 
-$[\hat u(x_i) = \sum_j \hat G_\theta(x_i,x_j) f(x_j)\, h]$
+Key design choices:
+- forcings are smooth functions with controlled frequency content
+- no noise injection
+- fixed train/validation/test splits
+- spectral solver used as ground truth
 
-and minimizes
-$[\mathcal L = \|\hat u - u\|_2^2]$
-
-Notably:
-- The true Green’s function is never shown to the model.
-- No PDE residuals or collocation losses are used.
+The data is simple on purpose. Any failure later should come from modeling choices, not data issues.
 
 ---
 
-## Phase 4 — Evaluation & Diagnostics
+## Phase 3 — Learning the operator
 
-### Learned vs Analytic Green’s Function
+### What the model actually learns
 
-The learned kernel reproduces the **global structure** of the analytic Green’s function:
+The neural network represents a **kernel** $g_\theta(x,x')$.
+
+From this kernel, solutions are produced via:
+$[\hat u(x_i) = \sum_j g_\theta(x_i,x_j)\, f(x_j)h]$
+
+The model is never trained on $g_\theta$ directly.  It is trained only on whether applying it produces the correct $u$.
+
+---
+
+### Enforcing physics (by construction)
+
+Two properties of the true Green’s function are enforced *architecturally*:
+
+- **symmetry**: $G(x,x') = G(x',x)$  
+- **boundary conditions**: $G(0,x') = G(1,x') = 0$
+
+These are built into the model itself, not added as loss penalties.
+
+This turns out to matter a lot.
+
+---
+
+## Phase 4 — Results and diagnostics
+
+### Learned Green’s function
+
+The learned kernel reproduces the **global structure** of the true Green’s function:
+- correct shape
 - symmetry
 - zero boundaries
-- correct triangular form
 
-The largest discrepancies occur near the diagonal \(x=x'\), where the true Green’s function has limited smoothness.
+The main mismatch occurs near the diagonal $x=x'$, where the true kernel is non-smooth.
 
----
-
-### Validation Operator Performance
-
-On unseen forcings:
-- Median relative solution error is low
-- A heavier tail appears for high-frequency forcings
-- Errors are structured, not random
-
-This confirms that the model learns a meaningful inverse operator, not just training memorization.
+This is a known hard case for smooth neural parameterizations.
 
 ---
 
-## Ablation Studies
+![Learned vs analytic Green’s function](results/greens_comparison.png)
 
-We perform controlled ablations to understand inductive biases:
+**Figure — Learned vs analytic Green’s function.**  
+Left: analytic Green’s function for the 1D Poisson operator.  
+Center: Green’s function learned by the neural operator.  
+Right: difference (learned − analytic).
 
-### 1. No Symmetry (BCs kept)
-- Improves empirical solution accuracy
-- Violates a fundamental physical property
-- Demonstrates a bias–variance tradeoff between physics and expressivity
-
-### 2. No Boundary Conditions (Symmetry kept)
-- Produces clear boundary leakage
-- Significantly worsens validation error
-- Confirms that BCs must be enforced architecturally
-
-These ablations show that **not all physics constraints behave the same**:
-- Some trade accuracy for interpretability
-- Others are non-negotiable for correctness
+The model recovers the correct global structure, symmetry, and boundary behavior.  
+The dominant errors are localized near the diagonal $x=x'$, where the true Green’s function has limited smoothness.
 
 ---
 
-## Key Takeaways
+### Validation performance (operator generalization)
 
-- Operator learning can recover Green’s-function structure without direct supervision.
-- Architectural constraints are more reliable than loss penalties.
-- Validation failures are interpretable and tied to frequency content and diagonal singularity.
-- Physical correctness and empirical accuracy can be in tension — and that tension is informative.
+We evaluate the learned operator on a held-out validation set of unseen forcing functions.
+
+Rather than measuring kernel error directly, we measure **solution error**, since the kernel is only meaningful through its action.
+
+Relative $L^2$ error statistics on the validation set:
+
+- mean error: **0.11**
+- median error: **0.05**
+- 90% quantile: **0.32**
+
+Most validation cases are predicted accurately, while a smaller subset of harder inputs produces larger errors.  
+These higher-error cases correlate with forcing functions that contain more high-frequency content.
+
+Importantly, this behavior is structured rather than random, indicating that the model has learned a meaningful inverse operator rather than memorizing training data.
 
 ---
 
-## Future Work
+## Ablation studies: what actually matters
 
-- Diagonal-aware kernel parameterizations
-- Frequency-conditioned kernels
-- Extension to variable-coefficient or higher-dimensional problems
+To understand which modeling choices are essential, we perform controlled ablations by removing individual physical constraints.
+
+All ablations are trained and evaluated under identical conditions.
 
 ---
 
-## Motivation
+### Removing symmetry (boundary conditions kept)
 
-This project was built to demonstrate:
-- modeling intuition over benchmark chasing
-- clean numerical reasoning
-- principled use of ML where it adds value
+When symmetry is removed, the kernel is no longer constrained to satisfy $G(x,x') = G(x',x)$.
 
-It is intended for readers comfortable with PDEs, numerical analysis, and modern ML.
+Validation performance improves slightly:
+
+- mean error: **0.08**
+- median error: **0.04**
+- 90% quantile: **0.23**
+
+This indicates that removing symmetry increases expressive freedom and allows the model to better fit the training distribution.
+
+However, the learned kernel is no longer physically valid.  
+This highlights a classic tradeoff between **inductive bias** and **empirical accuracy**: enforcing symmetry improves interpretability and correctness, but slightly restricts flexibility.
+
+---
+
+### Removing boundary conditions (symmetry kept)
+
+When boundary conditions are not enforced architecturally, the learned kernel no longer guarantees $u(0)=u(1)=0$.
+
+Validation performance degrades:
+
+- mean error: **0.13**
+- median error: **0.06**
+- 90% quantile: **0.42**
+
+In addition, predicted solutions exhibit clear boundary leakage, with maximum boundary violations on the order of $10^{-2}$.
+
+This demonstrates that boundary conditions cannot be reliably learned from data alone and must be enforced by construction.
+
+---
+
+### Summary of ablations
+
+These experiments show that not all physical constraints play the same role:
+
+- symmetry acts as a soft inductive bias that trades flexibility for physical correctness
+- boundary conditions are non-negotiable for stable and meaningful solutions
+
+Understanding this distinction is essential for building reliable operator-learning models.
+
+---
+
+## What this project demonstrates
+
+- Operators can be learned without direct supervision
+- Architectural constraints are more reliable than loss penalties
+- Some physics constraints are optional biases; others are non-negotiable
+- Failure modes are interpretable and tied to known mathematical structure
+
+---
+
+## Why this project exists
+
+This project is meant to show:
+- modeling intuition over benchmark optimization
+- careful numerical reasoning
+- principled use of ML in a physics setting
+
+It is written for readers who care about *understanding*, not just performance numbers.
+
+---
+
