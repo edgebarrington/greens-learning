@@ -36,6 +36,19 @@ It only sees examples of inputs $f$ and resulting outputs $u$.
 
 ---
 
+## Helpful before you move ahead
+
+The `theory/` folder contains short, self-contained PDFs that document the mathematical and conceptual background behind this project.
+
+These are **not required** to understand or run the code, but they provide additional context for readers who want to dig deeper into:
+- what a Green’s function represents
+- why learning the operator (instead of the solution) makes sense
+- how the modeling choices in this project are motivated
+
+The PDFs are written to be readable alongside the code, not as a formal paper.
+
+---
+
 ## The test problem
 
 We work with a deliberately simple system:
