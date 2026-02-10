@@ -5,7 +5,7 @@ This project asks a simple question:
 **Can we learn the inverse of a differential operator directly, instead of learning solutions?**
 
 Instead of training a model to predict $u(x)$ point-by-point, we train a model to represent the *operator* that maps an input function $f(x)$ to an output function $u(x)$.  
-Once that operator is learned, solutions emerge automatically by applying it.
+Once that operator is learned, solutions emerge automatically by applying it. From an ML perspective, this can be viewed as learning a data-driven integral operator (kernel) rather than a pointwise predictor, similar in spirit to neural operator methods.
 
 The goal here is not just accuracy, but understanding:
 - what the model actually learns
@@ -23,7 +23,7 @@ Many physical systems behave like this:
 > you give the system an input function → a fixed rule transforms it → you get an output function
 
 For linear systems, that “fixed rule” can be written as an **integral kernel**:
-$[u(x) = \int G(x,x') f(x')dx']$
+$u(x) = \int G(x,x') f(x')dx'$
 
 $G(x,x')$ is called a *Green’s function*. You can think of it as:
 - a lookup table of how inputs at $x'$ influence outputs at $x$
@@ -36,7 +36,7 @@ It only sees examples of inputs $f$ and resulting outputs $u$.
 
 ---
 
-## Helpful before you move ahead
+## Optional theory background
 
 The `theory/` folder contains short, self-contained PDFs that document the mathematical and conceptual background behind this project.
 
@@ -103,6 +103,7 @@ From this kernel, solutions are produced via:
 $[\hat u(x_i) = \sum_j g_\theta(x_i,x_j)\, f(x_j)h]$
 
 The model is never trained on $g_\theta$ directly.  It is trained only on whether applying it produces the correct $u$.
+In other words, the network is trained to approximate a mapping between function spaces, not a fixed-dimensional input–output map.
 
 ---
 
@@ -115,7 +116,7 @@ Two properties of the true Green’s function are enforced *architecturally*:
 
 These are built into the model itself, not added as loss penalties.
 
-This turns out to matter a lot.
+These choices turn out to have a significant impact on stability and generalization.
 
 ---
 
@@ -167,8 +168,9 @@ Importantly, this behavior is structured rather than random, indicating that the
 
 ## Ablation studies: what actually matters
 
-To understand which modeling choices are essential, we perform controlled ablations by removing individual physical constraints.
 
+To understand which modeling choices are essential, we perform controlled ablations by removing individual physical constraints.
+These ablations are not meant to optimize performance, but to test which inductive biases are essential versus optional.
 All ablations are trained and evaluated under identical conditions.
 
 ---
@@ -200,6 +202,7 @@ Validation performance degrades:
 - median error: **0.06**
 - 90% quantile: **0.42**
 
+For comparison, these errors are significantly lower than naive baselines that ignore operator structure, and degrade gracefully as input complexity increases.
 In addition, predicted solutions exhibit clear boundary leakage, with maximum boundary violations on the order of $10^{-2}$.
 
 This demonstrates that boundary conditions cannot be reliably learned from data alone and must be enforced by construction.
@@ -237,3 +240,24 @@ It is written for readers who care about *understanding*, not just performance n
 
 ---
 
+## How I’d extend this
+
+This project was designed as a controlled study rather than a performance-maximizing system. Based on the observed failure modes, several extensions are natural:
+
+- **Diagonal-aware kernels**  
+  Most kernel error is concentrated near $x = x'$, where the true Green’s function is non-smooth.  
+  A hybrid parameterization that treats the diagonal and off-diagonal regions differently could improve accuracy without sacrificing interpretability.
+
+- **Frequency-conditioned operators**  
+  Validation errors increase for forcings with higher-frequency content.  
+  Conditioning the kernel on spectral information or using multi-resolution representations could address this systematically.
+
+- **Higher-dimensional operators**  
+  Extending the approach to 2D elliptic PDEs would test scalability and reveal how architectural constraints generalize beyond one dimension.
+
+- **Variable-coefficient problems**  
+  Learning operators with spatially varying coefficients would require the kernel to depend explicitly on the input field, moving closer to realistic physical systems.
+
+These directions follow directly from the diagnostics and ablations in this project, rather than being added for complexity.
+
+---
